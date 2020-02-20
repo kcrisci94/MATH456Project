@@ -1,0 +1,31 @@
+---
+title: "Chico Student Housing Insecurity"
+author: "Kaleb Crisci, Constantin Raether, Laura Lampe"
+output:
+  pdf_document:
+  html_document:
+    df_print: paged
+---
+
+
+## Introduction  
+
+
+
+
+## About Our Data
+
+
+
+
+## Preparing our Data
+
+Our data file is located within the current directory, and is stored as a .dta file. In order to read this data, we need to use the read_dta() function from the "haven" package. This code is inside the dm.R file, so we will simply load that file. 
+
+```{r results = "hide", message=FALSE}
+source("dm.R")
+```
+
+
+
+
