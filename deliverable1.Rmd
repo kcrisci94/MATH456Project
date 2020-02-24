@@ -10,12 +10,19 @@ output:
 
 ## Introduction  
 
+Student homelessness and housing insecurity across the US has been an ongoing issue that has gotten worse in the last few years. In Chico, CA this issue has gotten especially worse due to the Camp Fire and the large influx of people in this small college town. 
 
+The goal of our study is to determine rates of student homelessness and housing insecurity, and calculate percentages of students who:
 
+1. Experienced 1 or more incidents of housing insecurity overall
+2. Experienced 3 or more incidents of housing insecurity in the past year
+3. Experienced homelessness in the past year
+
+An additional goal of this study is to determine the impact of missing data. 
 
 ## About Our Data
 
-
+Our data was collected from a survey of a random sample of college students taken in the Fall of 2017: 1,416 responses (48% response rate). In addition to the survey, 14 students who were identified as having housing issues participated in a more focused interview to augment the findings from the survey. 
 
 
 ## Preparing our Data
