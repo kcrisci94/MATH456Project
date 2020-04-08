@@ -1,0 +1,159 @@
+---
+title: "NewCodebook"
+author: "Kaleb Crisci"
+date: "3/21/2020"
+output: html_document
+---
+
+1. **StartDate:** Date the survey was taken
+2. **EndDate:** Date the survey was submitted
+3. **Status:**  The method of response for the survey. 0 means the survey was sent from a computer (ip address). All our data was collected the same way
+4. **IPAddress:** Holds the ip address of the student's computer when completing the survey (most are not available)
+5. **Progress:** Percent of survey completion
+6. **Duration__in_seconds_:** Time taken to complete the survey
+7. **Finished:** Did the student finish the survey? (no/yes = 0/1)
+8. **RecordedDate:** Date recorded on survey
+9. **ResponseId:** Unique identifier of student that is responding to the survey
+10. **LocationLatitude:** Latitude location of student responding to the survey
+11. **LocationLongitude:** Longitude location of student responding to the survey
+12. **DistributionChannel:** ?
+13. **UserLanguage:** Language spoken by student
+14. **Q118:** Consent from students to use their responses
+15. **D2_1:** Is the student Differently Abled? (no/yes = 0/1)
+16. **D2_2:** Is the student First Generation? (no/yes = 0/1)
+17. **D2_3:** Is the student a current or former foster child? (no/yes = 0/1)
+18. **D2_4:** Was the student homeless without being under the care of a parent, guardian or caretaker before age 18? (no/yes = 0/1)
+19. **D2_5:** Is English the student's second language? (no/yes = 0/1)
+20. **D2_6:** Is the student a veteran? (no/yes = 0/1)
+21. **D2_7:** Is the student active military? (no/yes = 0/1)
+22. **D2_8:** Is the student an athlete? (no/yes = 0/1)
+23. **D2_9:** Is the student a parent? (no/yes = 0/1)
+24. **D2_10:** Is the student a non-traditional student? (no/yes = 0/1)
+25. **D2_11:** None of the D2's apply to this student (no/yes = 0/1)
+26. **D2_12:** Decline to answer D2 (no/yes = 0/1)
+27. **D3:** What is the student's sexual orientation? (heterosexual, gay/lesbian, bisexual, unsure, other)
+28. **D4:** What is the student's gender? (male, female, transgender, other)
+29. **D5:** How many hours per week is the student currently employed? (Not currently working (1), Less than 10 hours (2), 10-19 hours (3), 20-29 hours (4), 30-39 hours (5), 40 hours or more (6))
+30. **D6:** Average hourly wage from all jobs worked in past 12 months (In an unpaid position (1), Under \$12.00/hr (2), \$12.00-\$15.00/hr (3), \$15.01-\$18.00/hr (4), \$18.01-\$21.00/hr (5), More than $21.00/hr (6), Decline to state (7))
+31. **D7:** Does the student help to financially support dependent(s) or other family members? (no/yes = 0/1)
+32. **H1:** Does the student own or rent their current residence?
+33. **H2:** How much does the student pay for housing expenses each month in rent/morgage/utilities? (None at all (1), Less than 30% of monthly budget (2), About 30% of monthly budget (3), Between 30-50% of monthly budget (4), More than 50% of monthly budget (5))
+34. H3
+35. H3_5_TEXT
+36. H4
+37. unableToPayRent
+38. lateRent
+39. unableToPayBill
+40. exceedCapacity
+41. askedToLeave
+42. evicted
+43. unsafeHSG
+44. H12
+45. H13
+46. H14_1
+47. H14_2
+48. H14_3
+49. H14_4
+50. H14_5
+51. H14_6
+52. H14_7
+53. H14_8
+54. H14_9
+55. H14_10
+56. H14_11
+56. H14_12
+58. H15
+59. H15_6_TEXT
+60. S2_1_1
+61. S2_1_2
+62. S2_1_3
+63. S2_1_4
+64. S2_2_1
+65. S2_2_2
+66. S2_2_3
+67. S2_2_4
+68. S2_3_1
+69. S2_3_2
+70. S2_3_3
+71. S2_3_4
+72. S2_4_1
+73. S2_4_2
+74. S2_4_3
+75. S2_4_4
+76. S2_5_1
+77. S2_5_2
+78. S2_5_3
+79. S2_5_4
+80. S2_6_1
+81. S2_6_2
+82. S2_6_3
+83. S2_6_4
+84. S3_1
+85. S3_2
+86. S3_3
+87. S3_4
+88. S3_5
+89. S3_6
+90. S3_7
+91. S3_8
+92. S3_9
+93. S3_9_TEXT
+94. S4_1
+95. S4_2
+96. S4_3
+97. S4_4
+98. S4_5
+99. S5
+100. CF2
+101. CF3_1
+102. CF3_2
+103. CF3_3
+104. CF3_4
+105. CF3_5
+106. CF3_5_TEXT
+107. CF4
+108. CF4_7_TEXT
+109. CF5
+110. Q117
+111. CF7
+112. CF8
+113. CF9
+114. CF10
+115. W2
+116. W3
+117. W4
+118. W5
+119. Q123
+120. Term
+121. ResPostalCode
+122. MailPostalCode
+123. Ethnicity
+124. Citizenship
+125. ChicoCumltvGPA
+126. HS_GPA
+127. TRF_GPA
+128. CumltvUnitsEarned
+129. UnitsAttempt
+130. AdmitType
+131. AcademicLvl_ERS
+132. FirstGen
+133. IndepIncome
+134. DependentIncome
+135. BIRTH_DT
+136. _merge
+137. directoutreach
+138. Ethnicity2
+139. age
+140. age_column
+141. US_Citizen
+142. HoursWorked
+143. paidEmployed
+144. workingTime
+145. rentdummy
+146. housingcosts
+147. housingburdendummy
+148. whopayshousing
+149. sharedExpenses
+150. unsureSleep
+151. unsureSleepDummy
+152. numberOfMoves
