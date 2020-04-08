@@ -1,11 +1,17 @@
 ---
 title: "Chico Student Housing Insecurity"
 author: "Kaleb Crisci, Constantin Raether, Laura Lampe"
-output:
-  pdf_document:
+output:   
   html_document:
-    df_print: paged
+    theme: "united"
+  
 ---
+```{r echo=FALSE}
+library(pander)
+library(kableExtra)
+library(scales)
+library(gridExtra)
+```
 
 
 ## Introduction  
@@ -22,18 +28,106 @@ An additional goal of this study is to determine the impact of missing data.
 
 ## About Our Data
 
-Our data was collected from a survey of a random sample of college students taken in the Fall of 2017: 1,416 responses (48% response rate). In addition to the survey, 14 students who were identified as having housing issues participated in a more focused interview to augment the findings from the survey. 
+Our data was collected from a survey of a random sample of college students taken in the Summer of 2019: 1,416 responses (48% response rate). In addition to the survey, 14 students who were identified as having housing issues participated in a more focused interview to augment the findings from the survey. 
 
 
 ## Preparing our Data
 
-Our data file is located within the current directory, and is stored as a .dta file. In order to read this data, we need to use the read_dta() function from the "haven" package. The code to accomplish this is inside the dm.R file, so we will simply load that file. 
+Our data file is located within the current directory, and is stored as a .dta file. In order to read this data, we need to use the read_dta() function from the "haven" package. The code to accomplish this as well as execute the data cleaning that needs to be done prior to analysis is inside the dm.R file, so we will simply load that file. 
 
 
-```{r results = "hide", message=FALSE}
+```{r results = "hide", message=FALSE, echo=FALSE}
 source("dm.R")
 ```
 
 
+## Exploratory data analysis   
 
-  
+### Sample Verification
+First, we will check how well our sample matches up with known population data. This will help to determine if our sample is a good representation of the overall student population. 
+
+```{r warning=FALSE, echo=FALSE}
+studcount <- c(88, 933, 461, 5816, 40, 900, 903, 7414)
+studPercent <- c(".5%", "5.5%", "2.7%", "34.2%", ".2%", "5.3%", "5.3%", "43.6%")
+levelsEthn <- data$Ethnicity2 %>% na.omit() %>% levels()
+popDem <- data.frame("Ethnicity" = as.factor(levelsEthn),
+                     "Campus Population" = paste0( studcount, " (", studPercent,  ")" ))
+
+sampleDemographics <- data %>% select(Ethnicity = Ethnicity2) %>% 
+  na.omit() %>%
+  group_by(Ethnicity) %>% 
+  summarise(
+    Sample = paste0( n(), " (", percent( n()/nrow(data), accuracy = .1 ), ")" ), 
+    Count = n() ) %>%
+  right_join(popDem, by = "Ethnicity") %>%
+  arrange(desc(Count)) %>%
+  select(-Count) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = "striped")
+sampleDemographics
+```
+
+>From this table, we can see that our sample of data corresponds well the actual campus population data in terms of ethnicity, even after removing the 19 missing data values. 
+
+Now let's take a look at Gender 
+```{r warning=FALSE, echo=FALSE}
+studcount <- c(7823, 9191, 5)
+studPercent <- c("46%", "54%", "< 1%")
+studGender <- c("Male", "Female", "Transgender/nonbinary")
+popGen <- data.frame("Gender" = as.factor(studGender),
+                     "Campus Population" = paste0( studcount, " (", studPercent,  ")" ))
+levelsGen <- data$D4 %>% na.omit() %>% levels()
+
+sampleGender <- data %>% select(Gender = D4) %>%
+  na.omit() %>%
+  group_by(Gender) %>% 
+  summarise(
+    Sample = paste0( n(), " (", percent( n()/nrow(data), accuracy = .1 ), ")" ), 
+    Count = n() ) %>%
+  right_join(popGen, by = "Gender") %>%
+  arrange(desc(Count)) %>%
+  select(-Count) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+sampleGender
+
+```
+
+>From this table, we can see that our sample of data corresponds well the actual campus population data in terms of gender, even after removing the 19 missing data values. Although it is also interesting to note that there are more students who identify as transgender or nonbinary in our sample than there are known according to CSU Chico demographics.
+
+
+### Potentially Useful Variables
+Next, we will examine some other variables that may play an important role in this study: Age, Employment, and housing type.   
+Age: It may be important to determine levels of housing insecurity for different age groups.   
+Employment: It may play a role in whether a particular student will be able to afford housing while going to school.   
+Housing type: It may be important to determine if the student is renting or owns their housing, or even if their parents pay for housing for them.   
+
+```{r warning=FALSE, echo=FALSE}
+ageDist <- ggplot(data, mapping=aes(x = data$age)) + geom_histogram(bins=35) + xlab("Ages") + ggtitle("Distribution of Ages") + theme(plot.title = element_text(hjust = 0.5)) + xlim(17, 50)
+
+paid <- data$paidEmployed %>% factor(labels=c("unpaid", "paid"))
+empDist <- ggplot(data, mapping=aes(x = paid)) + geom_histogram(stat="count") + xlab("Paid or Unpaid") + ggtitle("Distribution of Student Employment") + theme(plot.title = element_text(hjust = 0.5))
+
+housingDist <- ggplot(data, mapping=aes(x = data$H1)) + geom_histogram(stat="count") + xlab("How is Housing Handled?") + ggtitle("Housing Description") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle=45, hjust=1)) 
+
+rm(studcount, studGender, studPercent, popGen, popDem,levelsEthn, levelsGen)
+
+grid.arrange(ageDist, empDist, housingDist, ncol=3)
+```
+   
+>In the **Distribution of Ages plot**, we can see that most of our target age group are between the ages of 19 and 25 years old.  
+In the **distribution of student employment plot**, we see that more students are working a in a paid position than students who are either working in an unpaid position or not working at all. However, the number of students that aren't being paid for work is fairly close to the number of students who are getting paid for work.   
+From the **Housing description chart**, we can see that far more students rent their housing on their own than those who don't. 
+
+
+ 
+
+
+
+
+
+
+
+
+
+
