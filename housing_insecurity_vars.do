@@ -176,7 +176,7 @@ gen helpfamfin=D7
 recode helpfamfin 1=1 2=0 3=.
 label var helpfamfin "Do you help to financially support your dependents or other family members?"
 
-gen rentorown=H1
+  gen rentorown=H1
 label var rentorown "Do you own or rent your current residence?"
 label values rentorown rentorownlbl
 label define rentorownlbl 1 "own" 2 "rent" 3 "owned by parents or other relatives" 4 "rented by parents or other relatives" 5 "I do not currently have stable housing" 
@@ -546,7 +546,7 @@ replace CFimpact=1 if CF3_5==1
 
 label var campfireimpact "Impact of Camp Fire on Housing"
 label values campfireimpact campfireimpactlbl
-label define campfireimpactlbl 1 "No impact" 2 "Housing expenses increased" 3 "Temporarily moved" 4 "Permanently moved" 5 "Other"  
+label define campfireimpactlbl 1 "No impact" 2 "Housing expenses increased" 3 "Temporarily moved" 4 "Permanently moved" 5  "Other"  
 
 rename CF4 reasonsformove
 recode reasonsformove 6=.

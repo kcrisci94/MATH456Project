@@ -1,0 +1,49 @@
+---
+title: "Visualize office hours"
+author: "Robin Donatello"
+date: "August 28, 2018"
+output: html_document
+---
+Connect to google sheets and download the responses from the survey form. Rename the columns and shorten the class names to just MATH XXX. 
+```{r, warning=FALSE, message=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+library(googlesheets4)
+library(dplyr)
+oh_data <- "https://docs.google.com/spreadsheets/d/17XeLwLmpbfrGgKMaRriyLHIyXn6J0XT9v8tmz45CZek/edit#gid=1807123467"
+# read the data into a data frame
+raw <- read_sheet(oh_data)
+raw[] <- lapply(raw, function(x) { attributes(x) <- NULL; x })
+names(raw) <- c("ts", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm", "8pm")
+ds_raw <- select(raw, -ts)
+# truncate class names
+#ds_raw$class <- substr(ds_raw$class, 1, 8)
+```
+
+Reshape the data to long format, so there is not one column per time selection. Specify the order of factors so that they print out in a sensible order. 
+```{r}
+library(tidyr)
+dsl <- gather(data=ds_raw, key=time, value=days) %>% separate_rows(days, sep=", ")
+#dsl <- gather(data=ds_raw, key=time, value=days) %>% separate_rows(days, sep=", ")
+# https://stackoverflow.com/questions/13773770/split-comma-separated-column-into-separate-rows/31514711#31514711 
+dsl$days <- factor(dsl$days, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+dsl$time <- factor(dsl$time, levels=c("8pm", "7pm", "6pm", "5pm", "4pm", "3pm", "2pm", "1pm", "12pm", "11am", "10am", "9am", "8am"))
+```
+Count the number of records/responses per day/time. Also further stratify by class. 
+```{r}
+library(ggplot2); library(RColorBrewer)
+all <- dsl %>% group_by(days, time) %>% summarise(n=n()) %>% na.omit()
+ag <- dsl %>% group_by(days, time) %>% summarise(n=n()) %>% na.omit()
+```
+
+Create an interactive heatmap plot that shows which time slots have the highest number of students available. 
+```{r, fig.width=10}
+library(plotly)
+ a <- ggplot(data = all, aes(x = days, y = time)) + theme_minimal()+ 
+           geom_tile(aes(fill = n)) +
+           scale_fill_distiller(palette="Blues", trans="reverse")
+ b <- ggplot(data = ag, aes(x = days, y = time)) + theme_minimal()+ 
+           geom_tile(aes(fill = n)) + 
+           scale_fill_distiller(palette="Greens", trans="reverse")
+ggplotly(a)
+ggplotly(b)
+```

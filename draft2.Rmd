@@ -1,0 +1,493 @@
+---
+title: "Chico Student Housing Insecurity"
+author: "Kaleb Crisci, Constantin Raether, Laura Lampe"
+output:   
+  html_document:
+    theme: "united"
+  
+---
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(pander)
+library(kableExtra)
+library(scales)
+library(gridExtra)
+library(mice)
+```
+
+
+## Introduction  
+
+Over the past decade, universities and colleges across the US have documented a sharp increase in student homelessness and housing insecurity (Broton and Goldrick-Rab 2016).   
+Homelessness and housing insecurity has detrimental effects on student success, well-being, and academic performance 
+(Wilking et al. 2019)
+
+## About Our Data
+
+Our study utilizes the data collected and analyzed by Dr. Wilking and her team. Data was originally gathered via:   
+
+* Self-report survey: contains missing data due to question nonresponse   
+
+* Academic Records   
+
+Data Contents:   
+
+* 1,416 survey responses (48% response rate)   
+
+* 136 variables   
+   
+   
+Original data management and analyses was conducted in 
+Stata (StataCorp. 2017) which we translated into R (R Core Team, 2019) for this study
+
+## Goals   
+
+The goal of our study is to determine rates of student homelessness and housing insecurity, and calculate percentages of students who:
+
+1. Experienced 1 or more incidents of housing insecurity overall
+2. Experienced 3 or more incidents of housing insecurity in the past year
+3. Experienced homelessness in the past year
+
+An additional goal of this study is to determine the impact of missing data.   
+
+## Methods
+
+1. Code Translation   
+
++ Reproduce in R the data management techniques originally performed in Stata   
+2. Exploration   
+
++ Show that our data sample matches the data sample in the original study   
+3. Model Building:   
+
++ Reproduce the models that Dr. Wilking used in her study, and compare the results
+4. Imputation:   
+
++ Use MICE (van Buuren, Groothuis-Oudshoorn., 2011) multiple imputation techniques in R (R Core Team 2019) to impute missing values   
+
++ Use 10 imputation iterations to ensure convergence of values   
+5. Quantification of Impact of Missing Data    
+
++ Compare the odds ratios produced by the original model without imputation to those produced by the imputed model   
+
+
+## Preparing our Data
+
+All data cleaning and preparation was produced by translating original Stata code to R. Examples include:   
+
+* Creation of indicator variables based on multiple survey question responses   
+
+* Reordering of ordinal variables   
+
+* Conversion of question nonresponse cases to NA   
+
+## Crucial Variables   
+The following variables were determined based on answers to the questionnaire and were utilized in analyses:   
+1. Did the student experience 3 or more incidents of housing insecurity?   
+2. How many weekly hours does the student work in a paid position?   
+3. Is the student a person of color?   
+4. Is student is a sexual minority?   
+5. Is the student a parent?   
+6. Does student rent their housing?   
+7. Was the student’s housing situation impacted by the Camp Fire?   
+8. Was student homeless in the past 30 days or 12 months?   
+9. What level of knowledge of student services does the student have?   
+10. Is student a Butte County resident (and therefore have localized social networks)?   
+11. What was the method of contact for the study (email versus direct contact)?   
+
+
+```{r results = "hide", message=FALSE, echo=FALSE}
+source("dm.R")
+```
+
+
+## Exploratory Data Analysis   
+
+### Sample Ethnicity and Gender
+
+Dr. Wilking’s study reported the same number of students in each classification of both gender and ethnicity. 
+This was expected due to our use of the same dataset.
+
+
+```{r warning=FALSE, echo=FALSE}
+studcount <- c(12, 85, 42, 522, 5, 74, 70, 587)
+studPercent <- c("1%", "6%", "3%", "37%", ".4%", "5.3%", "5%", "42%")
+levelsEthn <- data$Ethnicity2 %>% na.omit() %>% levels()
+popDem <- data.frame("Ethnicity" = as.factor(levelsEthn),
+                     "Wilkings Study" = paste0( studcount, " (", studPercent,  ")" ))
+
+sampleDemographics <- data %>% select(Ethnicity = Ethnicity2) %>% 
+  na.omit() %>%
+  group_by(Ethnicity) %>% 
+  summarise(
+    'Our Study' = paste0( n(), " (", percent( n()/nrow(data), accuracy = .1 ), ")" ), 
+    Count = n(), .groups = "drop") %>%
+  right_join(popDem, by = "Ethnicity") %>%
+  arrange(desc(Count)) %>%
+  select(-Count) %>%
+  kable("html", align = "c", caption = "Demographics") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+#sampleDemographics
+```
+
+Now let's take a look at Gender    
+
+```{r warning=FALSE, echo=FALSE}
+studcount <- c(613, 775, 14)
+studPercent <- c( "43.3%", "54.9%", "1%")
+studGender <- c("Male", "Female", "Transgender/nonbinary")
+popGen <- data.frame("Gender" = as.factor(studGender),
+                     "Wilkings Study" = paste0( studcount, " (", studPercent,  ")" ))
+levelsGen <- data$D4 %>% na.omit() %>% levels()
+
+sampleGender <- data %>% select(Gender = D4) %>%
+  na.omit() %>%
+  group_by(Gender) %>% 
+  summarise(
+    'Our Study' = paste0( n(), " (", percent( n()/nrow(data), accuracy = .1 ), ")" ), 
+    Count = n(), .groups = "drop") %>%
+  right_join(popGen, by = "Gender") %>%
+  arrange(desc(Count)) %>%
+  select(-Count) %>%
+  kable("html", align = "c", caption = "Gender") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+#sampleGender
+sampleGender %>% 
+  kable_styling(full_width = F, position = "float_left")
+sampleDemographics %>% 
+  kable_styling(full_width = F, position = "right")
+
+
+```
+   
+    
+    
+>From this table, we can see that our sample of data corresponds well the actual campus population data in terms of ethnicity and gender. The percentages are slighly off because of differences in our total number of instances (likely caused by filtering out missing data prior to calculate)   
+   
+
+
+### Potentially Useful Variables   
+
+Next, we will examine some other variables that may play an important role in this study: Age, Employment, and housing type.   
+Age may be important to determine levels of housing insecurity for different age groups.   
+
+```{r warning=FALSE, echo=FALSE}
+ageDist <- ggplot(data, mapping=aes(x = data$age)) + geom_histogram(fill = "#0073C2FF", bins=35) + xlab("Ages") + ggtitle("Distribution of Ages") + theme(plot.title = element_text(hjust = 0.5)) + xlim(17, 50)
+
+paid <- data$paidEmployed %>% factor(labels=c("unpaid", "paid"))
+empDist <- ggplot(data, mapping=aes(x = paid)) + geom_histogram(fill = "#0073C2FF", stat="count") + xlab("Paid or Unpaid") + ggtitle("Distribution of Student Employment") + theme(plot.title = element_text(hjust = 0.5))
+
+housingDist <- ggplot(data, mapping=aes(x = data$H1)) + geom_histogram(fill = "#0073C2FF", stat="count") + xlab("How is Housing Handled?") + ggtitle("Housing Description") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle=45, hjust=1)) 
+
+rm(studcount, studGender, studPercent, popGen, popDem,levelsEthn, levelsGen)
+ageDist
+
+```
+   
+>In the **Distribution of Ages plot**, we can see that most of our target age group are between the ages of 19 and 25 years old.    
+
+Employment may play a role in whether a particular student will be able to afford housing while going to school.   
+Housing type may be important to determine if the student is renting or owns their housing, or even if their parents pay for housing for them.  
+
+```{r echo=FALSE, warning=FALSE}
+grid.arrange(empDist, housingDist, ncol=2)
+```
+      
+>In the **distribution of student employment plot**, we see that more students are working a in a paid position than students who are either working in an unpaid position or not working at all. However, the number of students that aren't being paid for work is fairly close to the number of students who are getting paid for work.   
+From the **Housing description chart**, we can see that far more students rent their housing on their own than those who don't. 
+
+### Housing Insecurity due to Camp Fire   
+
+```{r echo=FALSE}
+CF.housing.impact.data <- data %>% select(CF3_1:CF3_5) 
+CF.housing.moved <- sum(data$CF3_1, data$CF3_2) # temp/perm move
+moved.reason <- data %>% filter(!is.na(CF4)) %>% group_by(CF4) %>% tally()
+rent <- sum(data$CF3_3) #reported rent/housing increase
+a <- as.data.frame(table(data$CF4))[1,2] # students who's homes were destroyed in fire
+
+data.frame(
+  "CF_Impact" = c("Temp/Perm Move", "Home Destroyed", "Increased Housing Fees"), 
+  "Our_Study" = c(paste0(CF.housing.moved, " (", round(CF.housing.moved * 100/1416, digits = 1), "%)"), paste0(a, " (", round(a * 100/1416, digits = 1), "%)"), paste0(rent, " (", round(rent * 100/1416, digits = 1), "%)")), 
+  "Wilking_Study" = c("185 (13%)", "14 (1%)", "321 (22.6%)")) %>% kable(align='c', col.names = c(
+    "CampFire Impact","Our Study","Dr. Wilking's Study")) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) 
+
+```
+
+```{r echo=FALSE}
+
+a <- as.data.frame(table(data$housingindex))
+
+a <- a %>% mutate("wilking_study" = c("783 (56.2%)", "303 (21.8%)", "133 (9.6%)", "89 (6.4%)", "49 (3.5%)", "23 (1.7%)", "9 (0.7%)", "4 (0.3%)"))
+
+a$Freq <- sapply(a$Freq, function(x){
+  paste0(x, " (", round(x * 100/1416, digits = 1), "%)")
+})
+a %>% kable(align='c', col.names = c(
+    "HI Incidents","Our Study", " Dr. Wilking's Study")) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) %>% add_header_above(c("# of", " ", " "), line=F) 
+
+```
+
+In the survey, students were asked about the effect of Camp Fire on their housing situation. The variables measured here were `no impact`, `increased housing expenses`, `temporary move`, `permanent move`, or `other`. The chart below shows the results of these questions.   
+
+```{r echo=FALSE}
+
+CF.housing.impact.data <- data %>% select(CF3_1:CF3_5) 
+CF.housing.output <- plyr::ldply(CF.housing.impact.data, function(c) sum(c == 1))
+CF.housing.output$.id <- c("Perm. Move", "Temp Move", "Increased Exp", "None", "Other")
+plot1 <- CF.housing.output %>% 
+ggplot(aes(x = reorder(.id, V1), V1)) + geom_col(fill = "#0073C2FF") + xlab("Housing Incidents") + ylab("Count") + #coord_cartesian(ylim =c(0, 850)) 
+  geom_text(aes(label=percent(V1/nrow(data)), hjust = .5, vjust = -.5)) + coord_flip() + ggtitle("CF Impact on Housing")
+```
+
+>We can see from this chart that 22.7% of students experienced an increase in housing expenses due to the Camp Fire. In addition, 13.1% of students had to either permanently or temporarily move because of the fire. 
+   
+   
+```{r echo=FALSE}
+moved.reason <- data %>% filter(!is.na(CF4)) %>% group_by(CF4) %>% tally()
+moved.reason$CF4 <- c("Home Destroyed", "Home Damaged", "Chose to Leave", "Evicted", "Unrenewed Lease", "Other")
+plot2 <- moved.reason %>%
+ggplot(aes(x = reorder(CF4, n), n)) + geom_col(fill = "#0073C2FF") + xlab("Housing Incidents") + ylab("Count") + 
+  geom_text(aes(label=percent(n/nrow(data), accuracy = .01), vjust = 0, hjust = 1)) +
+  coord_flip() + ggtitle("Reason Left Home")
+grid.arrange(plot1, plot2, ncol = 2)
+```
+
+>From here, we can also see that 1% of the surveyed students moved because their home was destroyed or damaged in the Camp Fire. 
+
+## Modeling
+
+
+### Housing Insecurity Model Original
+
+```{r echo=FALSE}
+
+original_hi_model <- glm(HIdummy3 ~ employed3 + D2_9 + nonwhite + sexualmin + rentdummy + CFimpact + servicesindex + buttecountyres + directoutreach, data=data, family="binomial")
+#summary(original_hi_model)
+```
+
+```{r echo=FALSE, message=FALSE}
+ourModel <- data.frame(
+OR = exp(coef(original_hi_model)),
+LCL = exp(confint(original_hi_model))[,1],
+UCL = exp(confint(original_hi_model))[,2],
+p = format.pval(coef(summary(original_hi_model))[,4], digits=1, eps=.001)
+)
+rownames(ourModel) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Student Rent", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident", "Direct Survey Outreach")
+```
+
+```{r echo=FALSE, message=FALSE}
+## Before Imputation
+or.out.hi <- data.frame(
+"OR Our Study" = paste0(round(exp(coef(original_hi_model)), digits = 2)," ( ", round(exp(confint(original_hi_model))[,1], digits = 2), ", ", round(exp(confint(original_hi_model))[,2], digits = 2), ")"),
+"OR Wiking et al." = c("", "1.55* (0.86, 2.81)", "1.94* (1.2, 3.13)", "2.75* (1.4, 4.62)", "3.66* (1.92, 6.98)", "1.18 (0.40, 3.04)", "1.66* (1.16, 2.36)", "1.54* (0.94, 2.53)", "1.68* (0.99, 2.84)", "2.89* (1.95, 4.30)", "0.88* (0.80, 0.96)", "1.22* (0.77, 2.88)", "")
+)
+rownames(or.out.hi) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Student Rent", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident", "Direct Survey Outreach")
+kable(or.out.hi[-1,], digits=2, caption="Housing Insecurity: Original Model Reproduction") %>%
+kable_styling(full_width = FALSE, "striped")
+```
+### Housing Insecurity Imputation   
+
+
+```{r echo=FALSE}
+newData <- data %>% select(HIdummy3, employed3, D2_9, nonwhite, sexualmin, rentdummy, CFimpact, servicesindex, buttecountyres, directoutreach)
+
+```
+
+```{r echo=FALSE}
+#prop.table(table(is.na(newData)))
+```
+
+```{r echo=FALSE}
+#library(VIM)
+#aggr(newData, col=c('darkolivegreen3', 'salmon'),
+#     numbers=FALSE, sortVars= TRUE,
+#     labels=names(newData), cex.axis=.7,
+#     gap=3, ylab=c("Missing data", "Pattern"))
+```
+
+
+```{r echo=FALSE}
+imp.data <- mice(newData, m=10, seed=500, printFlag=FALSE)
+#plot(imp.data)
+```
+
+```{r echo=FALSE, warning=FALSE}
+newData.imputed <- complete(imp.data, action=10)
+```
+
+
+```{r echo=FALSE}
+#prop.table(table(is.na(newData.imputed)))
+```
+
+
+```{r echo=FALSE}
+imputed_hi_model <- glm(HIdummy3 ~ employed3 + D2_9 + nonwhite + sexualmin + rentdummy + CFimpact + servicesindex + buttecountyres + directoutreach, data=newData.imputed, family="binomial")
+# summary(imputed_hi_model)
+```
+
+
+Here is our table after imputing missing values using MICE.   
+
+```{r echo=FALSE, message=FALSE}
+or.out.hi.imputed <- data.frame(
+OR = exp(coef(imputed_hi_model)),
+LCL = exp(confint(imputed_hi_model))[,1],
+UCL = exp(confint(imputed_hi_model))[,2],
+p = format.pval(coef(summary(imputed_hi_model))[,4], digits=1, eps=.001)
+)
+rownames(or.out.hi.imputed) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Student Rent", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident", "Direct Survey Outreach")
+kable(or.out.hi.imputed[-1,], digits=2) %>%
+kable_styling(full_width = FALSE, "striped") %>%
+add_header_above(c(" "=2, "95% CI"=2, " "=1))
+```
+
+This chart shows how our Odds Ratios for the original data with missing values compares to the Odds Ratios for the imputed data that has no missing values.   
+
+```{r echo=FALSE, message=FALSE}
+names <- c("Direct Survey Outreach","Butte County Resident", "Services Index", "Housing Impacted Camp Fire", "Student Rent", "Sexual Minority", "Nonwhite", "Student Parent", "Works 30 or More Hours", "Works 20-29 Hours", "Works 10-19 Hours", "Works Less Than 10 Hours")
+
+a <- ifelse(nrow(ourModel) == 13, ourModel <- ourModel[-1,], ourModel <- ourModel)
+names <- factor(rownames(ourModel), levels=names)
+ggplot(ourModel[match(names, rownames(ourModel)),], aes(y = OR, x = names)) +
+  geom_point(aes(color="original"),size = 1) + 
+  geom_errorbar(aes(ymax = UCL, ymin = LCL, color="original")) +
+  geom_point(mapping = aes(x=names, y = OR, color="imputed"), data = or.out.hi.imputed[-1,], size = 1) +
+  geom_errorbar(mapping = aes(ymax=UCL, ymin=LCL, x=names, color="imputed"), data=or.out.hi.imputed[-1,], inherit.aes = FALSE) + coord_flip() + ggtitle("Housing Insecurity Original vs Imputed")
+```
+
+
+
+------------------------------------------------------------------------------
+
+### Original Homeless Regression
+
+```{r echo=FALSE, }
+original_homeless_model <- glm(homelessall ~ employed3 + D2_9 + nonwhite + sexualmin + CFimpact + servicesindex + buttecountyres, data=data, family="binomial")
+#summary(original_homeless_model)
+```
+
+
+```{r echo=FALSE, message=FALSE}
+ourModel2 <- data.frame(
+OR = exp(coef(original_homeless_model)),
+LCL = exp(confint(original_homeless_model))[,1],
+UCL = exp(confint(original_homeless_model))[,2],
+p = format.pval(coef(summary(original_homeless_model))[,4], digits=1, eps=.001)
+)
+
+rownames(ourModel2) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident")
+# kable(ourModel2[-1,], digits=2, caption = "Homelessness: With  Missing") %>%
+#  kable_styling(full_width = FALSE, "striped") %>%
+#   add_header_above(c(" "=2, "95% CI"=2, " "=1))
+```
+
+
+```{r echo=FALSE, message=FALSE}
+## Before Imputation
+or.out.homeless <- data.frame(
+"OR Our Study" = paste0(round(exp(coef(original_homeless_model)), digits = 2)," ( ", round(exp(confint(original_homeless_model))[,1], digits = 2), ", ", round(exp(confint(original_homeless_model))[,2], digits = 2), ")"),
+"OR Wiking et al." = c("", "1.46 (0.82, 2.61)", "0.85 (0.49, 1.47)", "2.18* (1.31, 3.63)", "1.93* (1.12, 3.33)", "1.43 (0.61, 3.36)", "1.21* (0.84, 1.73)", "1.45* (0.93, 2.27)", "2.97* (2.12, 4.15)", "0.97* (0.89, 1.07)", "1.61* (1.13, 2.32)")
+)
+rownames(or.out.homeless) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident")
+kable(or.out.homeless[-1,], digits=2, caption="Homelessness: Original Model Reproduction") %>%
+kable_styling(full_width = FALSE, "striped")
+```
+
+
+### Homeless Imputation   
+
+```{r echo=FALSE}
+newData <- data %>% select(homelessall, employed3, D2_9, nonwhite, sexualmin, rentdummy, CFimpact, servicesindex, buttecountyres, directoutreach)
+
+```
+
+
+```{r echo=FALSE}
+#prop.table(table(is.na(newData)))
+```
+
+```{r echo=FALSE}
+# library(VIM)
+# aggr(newData, col=c('darkolivegreen3', 'salmon'),
+#      numbers=FALSE, sortVars= TRUE,
+#      labels=names(newData), cex.axis=.7,
+#      gap=3, ylab=c("Missing data", "Pattern"))
+```
+
+
+```{r echo=FALSE}
+imp.data <- mice(newData, m=10, seed=500, printFlag=FALSE)
+# plot(imp.data)
+```
+
+```{r echo=FALSE, warning=FALSE}
+newData.imputed <- complete(imp.data, action=10)
+```
+
+
+```{r echo=FALSE}
+# prop.table(table(is.na(newData.imputed)))
+```
+
+
+### Homeless Regression with Imputation   
+
+```{r echo=FALSE}
+imputed_homeless_model <- glm(homelessall ~ employed3 + D2_9 + nonwhite + sexualmin + CFimpact + servicesindex + buttecountyres, data=newData.imputed, family="binomial")
+# summary(imputed_homeless_model)
+```
+
+Here is what we got after imputing the data using MICE.   
+
+```{r echo=FALSE, message=FALSE}
+or.out.homeless.imputed <- data.frame(
+OR = exp(coef(imputed_homeless_model)),
+LCL = exp(confint(imputed_homeless_model))[,1],
+UCL = exp(confint(imputed_homeless_model))[,2],
+p = format.pval(coef(summary(imputed_homeless_model))[,4], digits=1, eps=.001)
+)
+
+rownames(or.out.homeless.imputed) <- c("Intercept", "Works Less Than 10 Hours", "Works 10-19 Hours",
+"Works 20-29 Hours", "Works 30 or More Hours",
+"Student Parent", "Nonwhite",
+"Sexual Minority", "Housing Impacted Camp Fire",
+"Services Index", "Butte County Resident")
+kable(or.out.homeless.imputed[-1,], digits=2, caption = "Homelessness: Imputed") %>%
+kable_styling(full_width = FALSE, "striped") %>%
+add_header_above(c(" "=2, "95% CI"=2, " "=1))
+```
+```{r echo=FALSE, message=FALSE}
+names <- c("Butte County Resident", "Services Index", "Housing Impacted Camp Fire", "Sexual Minority", "Nonwhite", "Student Parent", "Works 30 or More Hours", "Works 20-29 Hours", "Works 10-19 Hours", "Works Less Than 10 Hours")
+
+a <- ifelse(nrow(ourModel2) == 11, ourModel2 <- ourModel2[-1,], ourModel2 <- ourModel2)
+names <- factor(rownames(ourModel2), levels=names)
+ggplot(ourModel2[match(names, rownames(ourModel2)),], aes(y = OR, x = names)) +
+  geom_point(aes(color="original"),size = 1) +
+  geom_errorbar(aes(ymax = UCL, ymin = LCL, color="original")) +
+  geom_point(mapping = aes(x=names, y = OR, color="imputed"), data = or.out.homeless.imputed[-1,], size = 1) +
+  geom_errorbar(mapping = aes(ymax=UCL, ymin=LCL, x=names, color="imputed"), data=or.out.homeless.imputed[-1,], inherit.aes = FALSE) + coord_flip() + ggtitle("Homelessness Original vs Imputed")
+```
+
+
